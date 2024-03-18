@@ -13,22 +13,7 @@ on early-init
     write /sys/block/mmcblk0/queue/nr_requests 256
     write /sys/block/mmcblk0/queue/iostats 0
 
-on post-fs
-    # Start services for bootanim
-    start surfaceflinger
-    start bootanim
-    start vendor.hwcomposer-2-4
-    start vendor.configstore-hal
-    start vendor.qti.hardware.display.allocator
-
 on boot
-    # DT2W
-    chmod 0660 /sys/touchpanel/double_tap
-
-    # GPU boost
-    chown system system /sys/class/kgsl/kgsl-3d0/min_pwrlevel
-    chmod 0660 /sys/class/kgsl/kgsl-3d0/min_pwrlevel
-
     # Kernelspace battery saver
     chown system system /sys/module/battery_saver/parameters/enabled
     chmod 0660 /sys/module/battery_saver/parameters/enabled
@@ -45,33 +30,13 @@ on boot
     chown system system /sys/devices/platform/kcal_ctrl.0/kcal_cont
     chmod 0660 /sys/devices/platform/kcal_ctrl.0/kcal_cont
 
-    # Vibration
+# USB Fastcharge
+    chown system system /sys/kernel/fast_charge/force_fast_charge
+    chmod 0660 /sys/kernel/fast_charge/force_fast_charge
+
+# Vibration
     chown system system /sys/class/leds/vibrator/vtg_level
     chmod 0660 /sys/class/leds/vibrator/vtg_level
-
-    # Thermal Profile
-    write /sys/class/thermal/thermal_message/sconfig 0
-
-service vendor.nfc_hal_service /vendor/bin/hw/android.hardware.nfc@1.2-service
-    override
-    class hal
-    user nfc
-    group nfc
-    disabled
-
-service nqnfc_1_2_hal_service /vendor/bin/hw/vendor.nxp.hardware.nfc@1.2-service
-    override
-    class hal
-    user nfc
-    group nfc
-    disabled
-
-on property:ro.product.device=willow
-    enable vendor.nfc_hal_service
-    enable nqnfc_1_2_hal_service
-
-on property:ro.boot.hwversion=*
-    setprop vendor.boot.hwversion ${ro.boot.hwversion}
 
 on property:persist.sys.device_provisioned=1
     # Use foreground cpuset for dex2oat
@@ -81,14 +46,6 @@ on property:persist.sys.device_provisioned=1
 on property:sys.boot_completed=1
     write /dev/stune/schedtune.prefer_idle 0
     write /dev/stune/schedtune.boost 0
-
-    # ZRAM setup
-    write /sys/block/zram0/comp_algorithm zstd
-    write /sys/block/zram0/max_comp_streams 8
-    write /proc/sys/vm/page-cluster 0
-
-    # Enable ZRAM on boot_complete
-    swapon_all /vendor/etc/fstab.qcom
 
 on property:vendor.post_boot.parsed=1
     # Setup cpusets
@@ -115,14 +72,14 @@ on property:vendor.post_boot.parsed=1
     write /proc/sys/kernel/sched_child_runs_first 1
 
     # Setup EAS tunables
-    write /sys/devices/system/cpu/cpu0/cpufreq/schedutil/up_rate_limit_us 500
-    write /sys/devices/system/cpu/cpu0/cpufreq/schedutil/down_rate_limit_us 20000
+    write /sys/devices/system/cpu/cpu0/cpufreq/schedutil/up_rate_limit_us 4000
+    write /sys/devices/system/cpu/cpu0/cpufreq/schedutil/down_rate_limit_us 16000
     write /sys/devices/system/cpu/cpu0/cpufreq/schedutil/hispeed_freq 1612800
     write /sys/devices/system/cpu/cpu0/cpufreq/schedutil/pl 1
     write /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq 864000
 
-    write /sys/devices/system/cpu/cpu4/cpufreq/schedutil/up_rate_limit_us 500
-    write /sys/devices/system/cpu/cpu4/cpufreq/schedutil/down_rate_limit_us 10000
+    write /sys/devices/system/cpu/cpu4/cpufreq/schedutil/up_rate_limit_us 4000
+    write /sys/devices/system/cpu/cpu4/cpufreq/schedutil/down_rate_limit_us 16000
     write /sys/devices/system/cpu/cpu4/cpufreq/schedutil/hispeed_freq 1804800
     write /sys/devices/system/cpu/cpu4/cpufreq/schedutil/pl 1
     write /sys/devices/system/cpu/cpu4/cpufreq/scaling_min_freq 902400
@@ -130,6 +87,11 @@ on property:vendor.post_boot.parsed=1
     # Report max frequency to unity tasks
     write /proc/sys/kernel/sched_lib_name "UnityMain,libunity.so"
     write /proc/sys/kernel/sched_lib_mask_force 255
+
+    # ZRAM setup
+    write /sys/block/zram0/comp_algorithm lz4
+    write /sys/block/zram0/max_comp_streams 8
+    write /proc/sys/vm/page-cluster 0
 
     # Restore default I/O tuning
     write /sys/block/mmcblk0/queue/scheduler "cfq"
@@ -140,14 +102,3 @@ on property:vendor.post_boot.parsed=1
     # Back to default VM settings
     write /proc/sys/vm/dirty_expire_centisecs 3000
     write /proc/sys/vm/dirty_background_ratio 10
-
-    # Enable idle state listener
-    write /sys/class/drm/card0/device/idle_encoder_mask 1
-    write /sys/class/drm/card0/device/idle_timeout_ms 100
-
-    # Enable PowerHAL hint processing
-    setprop vendor.powerhal.init 1
-
-on charger
-    chown system system /sys/class/leds/red/brightness
-    write /sys/class/leds/red/brightness 255
