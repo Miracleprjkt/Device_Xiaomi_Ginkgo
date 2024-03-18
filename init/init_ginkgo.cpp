@@ -47,9 +47,11 @@ void vendor_load_properties()
         hwversion == "18.39.0" || hwversion == "19.39.0")) {
         device = "willow";
         model = "Redmi Note 8T";
+        desc = "willow_eea-user 11 RKQ1.201004.002 V12.0.2.0.RCXEUXM release-keys";
     } else {
         device = "ginkgo";
         model = "Redmi Note 8";
+        desc = "ginkgo-user 11 RKQ1.201004.002 V12.0.3.0.RCOCNXM release-keys";
     }
 
     // Override all partitions' props
@@ -61,6 +63,7 @@ void vendor_load_properties()
         property_override(string("ro.product.") + prop + string("device"), device);
         property_override(string("ro.product.") + prop + string("model"), model);
         property_override(string("ro.") + prop + string("build.product"), device);
+        property_override(string("ro.") + prop + string("build.description"), desc);
     }
 
     // Set hardware revision
@@ -72,43 +75,4 @@ void vendor_load_properties()
     // Set camera model for EXIF data
     property_override("persist.vendor.camera.model", model);
 
-    // Set dalvik heap configuration
-    string heapstartsize, heapgrowthlimit, heapsize, heapminfree,
-			heapmaxfree, heaptargetutilization;
-
-    struct sysinfo sys;
-    sysinfo(&sys);
-
-    if (sys.totalram > 5072ull * 1024 * 1024) {
-        // from - phone-xhdpi-6144-dalvik-heap.mk
-        heapstartsize = "16m";
-        heapgrowthlimit = "256m";
-        heapsize = "512m";
-        heaptargetutilization = "0.5";
-        heapminfree = "8m";
-        heapmaxfree = "32m";
-    } else if (sys.totalram > 3072ull * 1024 * 1024) {
-        // from - phone-xhdpi-4096-dalvik-heap.mk
-        heapstartsize = "8m";
-        heapgrowthlimit = "192m";
-        heapsize = "512m";
-        heaptargetutilization = "0.6";
-        heapminfree = "8m";
-        heapmaxfree = "16m";
-    } else {
-        // from - phone-xhdpi-2048-dalvik-heap.mk
-        heapstartsize = "8m";
-        heapgrowthlimit = "192m";
-        heapsize = "512m";
-        heaptargetutilization = "0.75";
-        heapminfree = "512k";
-        heapmaxfree = "8m";
-    }
-
-    property_override("dalvik.vm.heapstartsize", heapstartsize);
-    property_override("dalvik.vm.heapgrowthlimit", heapgrowthlimit);
-    property_override("dalvik.vm.heapsize", heapsize);
-    property_override("dalvik.vm.heaptargetutilization", heaptargetutilization);
-    property_override("dalvik.vm.heapminfree", heapminfree);
-    property_override("dalvik.vm.heapmaxfree", heapmaxfree);
 }

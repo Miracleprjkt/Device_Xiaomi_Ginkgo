@@ -4,10 +4,14 @@
 # Copyright (C) 2017-2020 The LineageOS Project
 #
 # SPDX-License-Identifier: Apache-2.0
-#
+
+if [ "${BASH_SOURCE[0]}" != "${0}" ]; then
+    return
+fi
 
 set -e
 
+# Required!
 DEVICE=ginkgo
 VENDOR=xiaomi
 
@@ -18,8 +22,8 @@ if [[ ! -d "${MY_DIR}" ]]; then MY_DIR="${PWD}"; fi
 ANDROID_ROOT="${MY_DIR}/../../.."
 
 HELPER="${ANDROID_ROOT}/tools/extract-utils/extract_utils.sh"
-if [ ! -f "${HELPER}" ]; then
-    echo "Unable to find helper script at ${HELPER}"
+if [ ! -f "$HELPER" ]; then
+    echo "Unable to find helper script at $HELPER"
     exit 1
 fi
 source "${HELPER}"
@@ -56,11 +60,14 @@ fi
 function blob_fixup() {
     case "${1}" in
         vendor/bin/mlipayd@1.1 | vendor/lib64/libmlipay.so | vendor/lib64/libmlipay@1.1.so)
-            patchelf --remove-needed "vendor.xiaomi.hardware.mtdservice@1.0.so" "${2}"
+            "${PATCHELF}" --remove-needed "vendor.xiaomi.hardware.mtdservice@1.0.so" "${2}"
             ;;
         vendor/etc/camera/camera_config.xml)
             # Remove vtcamera for ginkgo
             gawk -i inplace '{ p = 1 } /<CameraModuleConfig>/{ t = $0; while (getline > 0) { t = t ORS $0; if (/ginkgo_vtcamera/) p = 0; if (/<\/CameraModuleConfig>/) break } $0 = t } p' "${2}"
+            ;;
+        vendor/lib/miwatermark.so)
+            "${PATCHELF}" --add-needed "libwatermark_shim.so" "${2}"
             ;;
     esac
 }
@@ -68,6 +75,7 @@ function blob_fixup() {
 # Initialize the helper
 setup_vendor "${DEVICE}" "${VENDOR}" "${ANDROID_ROOT}" false "${CLEAN_VENDOR}"
 
-extract "${MY_DIR}/proprietary-files.txt" "${SRC}" "${KANG}" --section "${SECTION}"
+extract "${MY_DIR}"/proprietary-files.txt "${SRC}" \
+        "${KANG}" --section "${SECTION}"
 
-"${MY_DIR}/setup-makefiles.sh"
+DEVICE_BLOB_ROOT="${ANDROID_ROOT}"/vendor/"${VENDOR}"/"${DEVICE}"/proprietary
